@@ -1,0 +1,142 @@
+version: "3.9"
+services:
+
+  users_db:
+    image: postgres:latest
+    volumes:
+      - ./data/users_db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: users_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+
+  # Database Invitation Services
+  invite_db:
+    image: postgres:latest
+    volumes:
+      - ./data/invite_db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: invite_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+  # Database for Calendar and sharing Services
+  calendar_db:
+    image: postgres:latest
+    volumes:
+      - ./data/calendar_db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: calendar_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+  events_db:
+    image: postgres:latest
+    volumes:
+      - ./data/events_db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: events_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+  client_db:
+    image: postgres:latest
+    volumes:
+      - ./data/client_db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: client_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+
+  # Microservice for User Authentication
+  users_service:
+    build: services/users_service
+
+    expose:
+      - 8000
+
+    depends_on:
+      - users_db
+    environment:
+      DB_HOST: users_db
+      DB_NAME: users_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+
+  # Microservice for Invitation
+  invite_service:
+    build: services/invite_service
+
+    depends_on:
+      - invite_db
+    environment:
+      DB_HOST: invite_db
+      DB_NAME: invite_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+  # Microservice for Calendar
+  calendar_service:
+    build: services/calendar_service
+    depends_on:
+      - calendar_db
+    environment:
+      DB_HOST: calendar_db
+      DB_NAME: calendar_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+  # Microservice for Events
+  events_service:
+    build:
+      context: ./services/events_service
+      dockerfile: Dockerfile
+
+    depends_on:
+      - events_db
+
+    expose:
+      - 8000
+    environment:
+      DB_HOST: events_db
+      DB_NAME: events_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+  client_service:
+    build:
+      context: ./services/client
+      dockerfile: Dockerfile
+
+    expose:
+      - 8000
+
+    depends_on:
+      - client_db
+    environment:
+      DB_HOST: client_db
+      DB_NAME: client_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+#  client:
+#    build: services/client
+#
+  nginx:
+    build:
+      context: ./services/nginx
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - 80:80
+    depends_on:
+      - users_service
+      - calendar_service
+      - events_service
+      - invite_service
+      - client_service
+
+

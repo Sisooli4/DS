@@ -1,0 +1,7 @@
+fastapi
+psycopg2-binary
+icecream
+requests
+sqlalchemy
+postgres
+asyncpg
