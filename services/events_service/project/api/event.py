@@ -31,8 +31,8 @@ class Event(BaseModel):
 
 @router.post("")
 async def add(title:str = Form(), organizer: str = Form(), date: date = Form(), private:str = Form(), text: str = Form()):
-
-    event_id, error_code = await add_event(title, organizer, date, private, text)
+    ic(title, organizer, date, private.capitalize(), text)
+    event_id, error_code = await add_event(title, organizer, date, private.capitalize(), text)
     if event_id:
         return {"event_id": event_id}
     elif error_code == 'event_already_exists':
@@ -62,14 +62,11 @@ async def get(id: int, username:str):
 async def public():
 
     events, error_code = await get_public()
-    ic("hello")
     if error_code == "events_found":
         return {"events": events}
     elif error_code == 'events_not_found':
-        ic("hello2")
         raise HTTPException(status_code=404, detail="No events to show!")
     elif error_code == 'server_error':
-        ic("hello3")
         raise HTTPException(status_code=500,
                             detail="An error occurred while searching for the public events!\nPlease try again later.")
     else:

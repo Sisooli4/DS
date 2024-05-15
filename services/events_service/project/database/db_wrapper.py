@@ -32,7 +32,9 @@ async def add_event(title: str, organizer: str, date: datetime.date, private: st
             )
             session.add(new_event)
             await session.commit()
-            ic(new_event.id)
+
+            # Refresh the new_event object to get the ID
+            await session.refresh(new_event)
             return new_event.id, "Event added successfully!"
 
         except SQLAlchemyError as e:
@@ -54,13 +56,11 @@ async def get_event(event_id: int, username: str) -> tuple:
                 participants = [[participant.username, participant.status] for participant in
                                 participants_result.scalars().all()]
 
-                if not participants:
-                    participants = [[]]
                 # Check if the event is public or if the username matches the organizer
                 if existing_event.private == 'Public' or existing_event.organizer == username or username in [participant[0] for participant in participants]:
                     # Check if the username is among the participants
 
-                    return [existing_event.title, existing_event.organizer, existing_event.date, existing_event.private, existing_event.text, participants], "event_found"
+                    return [existing_event.title, existing_event.date, existing_event.organizer, existing_event.private, existing_event.text, participants], "event_found"
 
                 else:
                     return None, "access_denied"
@@ -81,7 +81,7 @@ async def get_public():
             result = await session.execute(stmt)
             events = result.scalars().all()
             if events:
-                public_events = [(event.title, event.organizer, event.date) for event in events]
+                public_events = [(event.title, event.date, event.organizer, event.id) for event in events]
                 return public_events, "events_found"
             else:
                 return [], "events_not_found"

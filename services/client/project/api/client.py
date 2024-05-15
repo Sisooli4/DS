@@ -35,33 +35,41 @@ def load_from_session(key):
 @router.get("")
 async def home(request: Request):
     username = request.cookies.get("username")
-    if username == None or username == "":
+    if username is None or username == "":
         return RedirectResponse(url="/web/login", status_code=303)
-    else:
-        # ================================
-        # FEATURE (list of public events)
-        #
-        # Retrieve the list of all public events. The webpage expects a list of (title, date, organizer) tuples.
-        # Try to keep in mind failure of the underlying microservice
-        # =================================
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{getContainer()}/events/public")
-        if resp.status_code == 200:
-            events = await resp.json().get("events")
-            return templates.TemplateResponse('home.html',
-                                              {"request": request, "username": username, "events": events})
-        elif resp.status_code == 404:
-            return templates.TemplateResponse('home.html',
-                                              {"request": request, "username": username, "error_message": resp.json().get("detail")})
-        elif resp.status_code == 500:
-            return templates.TemplateResponse('home.html',
-                                              {"request": request, "username": username,
-                                               "error_message": resp.json().get("detail")})
-        # public_events = [('Test event', 'Tomorrow', 'Benjamin')]  # Placeholder data
-        # return templates.TemplateResponse('home.html', {"request": request, "username": username, "events": public_events})
+
+    feedback = {'category': request.cookies.get("feedback_category"),
+                'message': request.cookies.get("feedback_message")}
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f"{getContainer()}/events/public")
+
+    if resp.status_code == 200:
+        events = resp.json().get("events")
+        ic(events)
+        response = templates.TemplateResponse('home.html', {
+            "request": request,
+            "username": username,
+            "feedback": feedback,
+            "events": events
+        })
+        response.delete_cookie("feedback_message")
+        response.delete_cookie("feedback_category")
+        return response
+    elif resp.status_code == 404 or resp.status_code == 500:
+        response = templates.TemplateResponse('home.html', {
+            "request": request,
+            "username": username,
+            "feedback": feedback,
+            "error_message": resp.json().get("detail")
+        })
+        response.delete_cookie("feedback_message")
+        response.delete_cookie("feedback_category")
+        return response
+    # Delete the feedback cookies
 
 @router.post("/event")
-async def create_event(title: str = Form(...), description: str = Form(...), date: str = Form(...), publicprivate: str = Form(...), invites: str = Form(...)):
+async def create_event(request: Request, title: str = Form(...), description: str = Form(...), date: str = Form(...), publicprivate: str = Form(...), invites: str = Form(...)):
     #==========================
     # FEATURE (create an event)
     #
@@ -71,13 +79,32 @@ async def create_event(title: str = Form(...), description: str = Form(...), dat
     async with httpx.AsyncClient() as client:
         data = {
             "title": title,
-            "description": description,
-            "event_date": date,
-            "publicprivate": publicprivate,
+            "organizer": request.cookies.get("username"),
+            "date": date,
+            "private": publicprivate,
+            "text": description,
         }
 
         resp = await client.post(f"{getContainer()}/events", data=data)
-    return RedirectResponse(url="/", status_code=303)
+        if resp.status_code == 200:
+            response = RedirectResponse(url="/web", status_code=303)
+            response.set_cookie("feedback_category", "success")
+            response.set_cookie("feedback_message","Successfully created event!")
+            return response
+        elif resp.status_code == 409:
+            response = RedirectResponse(url="/web", status_code=303)
+            response.set_cookie("feedback_category", "danger")
+            response.set_cookie("feedback_message", resp.json().get("detail"))
+            return response
+        elif resp.status_code == 500:
+            response = RedirectResponse(url="/web", status_code=303)
+            response.set_cookie("feedback_category", "danger")
+            response.set_cookie("feedback_message", resp.json().get("detail"))
+            return response
+
+
+
+
 
 @router.get("/calendar")
 @router.post('/calendar')
@@ -143,7 +170,8 @@ async def view_event(request: Request, event_id: int):
     #                                   {"request": request, "username": username, "password": password, "event": event,
     #                                    "success": success})
 
-    resp = await request.get(f"{getContainer()}/events/event/{event_id}?username={username}")
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f"{getContainer()}/events/event/{event_id}?username={username}")
     if resp.status_code == 200:
         event = resp.json().get('event')
         ic(event)
@@ -177,7 +205,8 @@ async def login(request: Request):
         return templates.TemplateResponse('login.html', {"request": request, "username": None})
     elif request.method == 'POST':
         form_data = await request.form()
-        resp = requests.post(f"{getContainer()}/users/authenticate", data=form_data)  # Placeholder for actual authentication logic
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(f"{getContainer()}/users/authenticate", data=form_data)  # Placeholder for actual authentication logic
         if resp.status_code == 200:
             username = resp.json().get('username')
             response = RedirectResponse(url="/web", status_code=303)
@@ -221,7 +250,8 @@ async def register(request: Request):
         return templates.TemplateResponse('login.html', {"request": request, "username": None})
     elif request.method == 'POST':
         form_data = await request.form()
-        resp = requests.post(f"{getContainer()}/users", data=form_data)
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(f"{getContainer()}/users", data=form_data)
         if resp.status_code == 200:
             username = resp.json().get('username')
             response = RedirectResponse(url="/web", status_code=303)

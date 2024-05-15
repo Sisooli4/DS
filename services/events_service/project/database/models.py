@@ -11,7 +11,7 @@ class Event(Base):
     title = Column(String, nullable=False)
     organizer = Column(String, nullable=False)
     date = Column(Date, nullable=False)
-    private = Column(Boolean, nullable=False)
+    private = Column(String, nullable=False)
     text = Column(String)
 
     __table_args__ = (
