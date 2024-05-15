@@ -1,4 +1,4 @@
-import datetime
+from datetime import date
 from sqlalchemy import select
 import logging
 from icecream import ic
@@ -7,7 +7,7 @@ from .models import Event, Participants
 from .database import get_async_session
 
 
-async def add_event(title: str, organizer: str, date: datetime.date, private: str, text: str = "No description added by organizer") -> tuple:
+async def add_event(title: str, organizer: str, date: date, private: str, text: str = "No description added by organizer") -> tuple:
     async with get_async_session() as session:
         try:
             # Check if the event already exists with the same constraints
@@ -42,7 +42,7 @@ async def add_event(title: str, organizer: str, date: datetime.date, private: st
             logging.error(f"Error adding event {title} by {organizer} on {date}: {str(e)}")
             return None, "server_error"
 
-async def get_event(event_id: int, username: str) -> tuple:
+async def get_event(event_id: int, username: str, invite: bool=False) -> tuple:
     async with get_async_session() as session:
         try:
             stmt = select(Event).where(Event.id == event_id)
@@ -57,7 +57,7 @@ async def get_event(event_id: int, username: str) -> tuple:
                                 participants_result.scalars().all()]
 
                 # Check if the event is public or if the username matches the organizer
-                if existing_event.private == 'Public' or existing_event.organizer == username or username in [participant[0] for participant in participants]:
+                if existing_event.private == 'Public' or existing_event.organizer == username or username in [participant[0] for participant in participants] or invite:
                     # Check if the username is among the participants
 
                     return [existing_event.title, existing_event.date, existing_event.organizer, existing_event.private, existing_event.text, participants], "event_found"
@@ -91,13 +91,14 @@ async def get_public():
             logging.error(f"Error loading public events: {str(e)}")
             return None, "server_error"
 
-async def add_participant(event_id: int, username: str) -> tuple:
+async def add_participant(event_id: int, username: str, status:str) -> tuple:
     async with get_async_session() as session:
         try:
             # Check if the event already exists with the same constraints
             stmt = select(Participants).where(
                 Participants.event_id == event_id,
                 Participants.username == username,
+                Participants.status == status
             )
             result = await session.execute(stmt)
             existing_event = result.scalars().first()
@@ -108,6 +109,7 @@ async def add_participant(event_id: int, username: str) -> tuple:
             new_participant = Participants(
                 event_id=event_id,
                 username=username,
+                status=status
             )
             session.add(new_participant)
             await session.commit()

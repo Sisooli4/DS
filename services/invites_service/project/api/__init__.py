@@ -2,7 +2,7 @@ from fastapi import Depends
 from .app import app
 from . import docs
 
-from .invite import router as event_router
+from .invites import router as event_router
 from ..database.database import get_async_session, create_db_and_tables
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,5 +22,5 @@ async def on_startup(session: AsyncSession = Depends(get_async_session)):
     await create_db_and_tables()
 
 app.mount("/static", StaticFiles(directory="static"))
-app.include_router(docs.router, prefix="/invite-service", tags=["docs"])
-app.include_router(event_router, prefix="/invite", tags=["invite"])
+app.include_router(docs.router, prefix="/invites-service", tags=["docs"])
+app.include_router(event_router, prefix="/invites", tags=["invites"])

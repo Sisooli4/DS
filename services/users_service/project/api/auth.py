@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Form
 from fastapi.responses import RedirectResponse
 
 from fastapi import HTTPException
-from ..database.db_wrapper import add_user, verify_user
+from ..database.db_wrapper import add_user, verify_user, user_exists
 import typing
 from icecream import ic
 
@@ -56,3 +56,15 @@ async def login(username: str = Form(...), password: str = Form(...)):
         # Handle other unspecified errors generically
         raise HTTPException(status_code=500, detail="An unknown error occurred.")
 
+@router.get("/exists")
+async def login(username: str):
+    usernameEx, error_code = await user_exists(username)
+    if usernameEx:
+        return True
+    elif error_code == 'invalid_user':
+        raise HTTPException(status_code=404, detail=f"User {username} does not exist.\n")
+    elif error_code == 'server_error':
+        raise HTTPException(status_code=500, detail=f"An error occurred during verifying {username}. Please try again later.\n")
+    else:
+        # Handle other unspecified errors generically
+        raise HTTPException(status_code=500, detail=f"An unknown error occurred when verifying {username}\n")

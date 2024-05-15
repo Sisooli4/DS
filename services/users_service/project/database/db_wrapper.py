@@ -43,3 +43,19 @@ async def verify_user(username: str, password: str):
         except SQLAlchemyError as e:
             logging.error(f"Database error during authentication for user {username}: {str(e)}")
             return None, "server_error"
+
+async def user_exists(username: str):
+    async with get_async_session() as session:
+        try:
+            stmt = select(User).where(User.username == username)
+            result = await session.execute(stmt)
+            user = result.scalars().first()
+            if user:
+                logging.info(f"User {username} exists.")
+                return username, "user exists"
+            else:
+                logging.warning(f"User {username}, does not exists.")
+                return None, "invalid_user"
+        except SQLAlchemyError as e:
+            logging.error(f"Database error during authentication for user {username}: {str(e)}")
+            return None, "server_error"

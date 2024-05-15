@@ -44,8 +44,8 @@ async def add(title:str = Form(), organizer: str = Form(), date: date = Form(), 
         raise HTTPException(status_code=500, detail="An unknown error occurred.")
 
 @router.get("/event/{id}")
-async def get(id: int, username:str):
-    event, error_code = await get_event(id, username)
+async def get(id: int, username:str, invite:bool = False):
+    event, error_code = await get_event(id, username, invite)
     if event:
         return {"event": event}
     elif error_code == 'access_denied':

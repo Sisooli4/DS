@@ -3,6 +3,7 @@
 {% block content %}
 <div class="row pt-5">
     <div class="col">
+        {% if invites %}
         <h2> Showing the invites you have not yet responded to</h2>
         <table class="table">
             <thead>
@@ -27,6 +28,9 @@
             </tr>
             {% endfor %}
         </table>
+        {% else %}
+            <h2>{{ error_message }}</h2>
+        {% endif %}
     </div>
 </div>
 

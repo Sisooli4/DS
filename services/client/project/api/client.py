@@ -76,6 +76,7 @@ async def create_event(request: Request, title: str = Form(...), description: st
     # Given some data, create an event and send out the invites.
     #==========================
     # Event creation logic would go here
+    ic(invites)
     async with httpx.AsyncClient() as client:
         data = {
             "title": title,
@@ -87,9 +88,17 @@ async def create_event(request: Request, title: str = Form(...), description: st
 
         resp = await client.post(f"{getContainer()}/events", data=data)
         if resp.status_code == 200:
+            event_id = resp.json().get("event_id")
+            params_data = {"event_id": event_id, "usernames": invites}
+            resp = await client.post(f"{getContainer()}/invites", params=params_data)
             response = RedirectResponse(url="/web", status_code=303)
-            response.set_cookie("feedback_category", "success")
-            response.set_cookie("feedback_message","Successfully created event!")
+            if resp.status_code == 200:
+                response.set_cookie("feedback_category", "success")
+                response.set_cookie("feedback_message","Successfully created event! Everyone is invited!")
+            elif resp.status_code == 422:
+                response.set_cookie("feedback_category", "danger")
+                response.set_cookie("feedback_message", resp.json().get("detail"))
+
             return response
         elif resp.status_code == 409:
             response = RedirectResponse(url="/web", status_code=303)
@@ -199,9 +208,7 @@ async def login(request: Request):
     # microservice returns True if correct combination, False if otherwise.
     # Also pay attention to the status code returned by the microservice.
     # ================================
-    if request.cookies.get("username") != None and request.cookies.get("username") != "":
-        return RedirectResponse(url="/web", status_code=303)
-    elif request.method == 'GET':
+    if request.method == 'GET':
         return templates.TemplateResponse('login.html', {"request": request, "username": None})
     elif request.method == 'POST':
         form_data = await request.form()
@@ -244,9 +251,7 @@ async def register(request: Request):
     #
     # Registration is successful if a user with the same username doesn't exist yet.
     # ================================
-    if request.cookies.get("username") != None and request.cookies.get("username") != "":
-        return RedirectResponse(url="/web", status_code=303)
-    elif request.method == 'GET':
+    if request.method == 'GET':
         return templates.TemplateResponse('login.html', {"request": request, "username": None})
     elif request.method == 'POST':
         form_data = await request.form()
@@ -280,18 +285,28 @@ async def register(request: Request):
             })
 
 @router.get('/invites')
-@router.post('/invites')
+@router.post("/invites")
 async def invites(request: Request):
     #==============================
     # FEATURE (list invites)
     #
     # retrieve a list with all events you are invited to and have not yet responded to
     #==============================
-    if request.cookies.get("username") == None or request.cookies.get("username") == "":
+    username = request.cookies.get("username")
+    if username == None or username == "":
         return RedirectResponse(url="/web/login", status_code=303)
     elif request.method == 'GET':
-        my_invites = [(1, 'Test event', 'Tomorrow', 'Benjamin', 'Private')]  # Placeholder data
-        return templates.TemplateResponse('invites.html', {"request": request, "username": username, "password": password, "invites": my_invites})
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"{getContainer()}/invites/{username}")
+            if resp.status_code == 200:
+                invites = resp.json().get('invites')
+                return templates.TemplateResponse('invites.html',
+                                                  {"request": request, "username": username,
+                                                   "invites": invites})
+            elif resp.status_code == 404 or resp.status_code == 500:
+                error = resp.json().get('detail')
+                return templates.TemplateResponse('invites.html', {"request": request, "username": username, "error_message": error})
+
     else:
         # Process invite logic here
         return RedirectResponse(url="/invites", status_code=303)
@@ -303,7 +318,7 @@ async def logout():
     #
     # Clear the current session and redirect to the login page.
     #==============================
-    response = RedirectResponse(url="/web", status_code=303)
+    response = RedirectResponse(url="/web/login", status_code=303)
     response.set_cookie("username", "", expires=0)
 
     return response
