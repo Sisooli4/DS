@@ -25,6 +25,8 @@
             </tr>
             {% endfor %}
         </table>
+        {% elif no_result %}
+            <h4>No events to show!</h4>
         {% else %}
         <div class="alert alert-danger" role="alert">
             You do not have access to this calendar!

@@ -12,7 +12,7 @@ class Event(Base):
     organizer = Column(String, nullable=False)
     date = Column(Date, nullable=False)
     private = Column(String, nullable=False)
-    text = Column(String)
+    text = Column(String, nullable=False)
 
     __table_args__ = (
         UniqueConstraint('title', 'organizer', 'date', 'private', name='uix_title_organizer_date_private'),

@@ -7,7 +7,7 @@ from .models import Event, Participants
 from .database import get_async_session
 
 
-async def add_event(title: str, organizer: str, date: date, private: str, text: str = "No description added by organizer") -> tuple:
+async def add_event(title: str, organizer: str, date: date, private: str, text: str) -> tuple:
     async with get_async_session() as session:
         try:
             # Check if the event already exists with the same constraints
@@ -42,7 +42,7 @@ async def add_event(title: str, organizer: str, date: date, private: str, text: 
             logging.error(f"Error adding event {title} by {organizer} on {date}: {str(e)}")
             return None, "server_error"
 
-async def get_event(event_id: int, username: str, invite: bool=False) -> tuple:
+async def get_event(event_id: int, username: str) -> tuple:
     async with get_async_session() as session:
         try:
             stmt = select(Event).where(Event.id == event_id)
@@ -57,7 +57,7 @@ async def get_event(event_id: int, username: str, invite: bool=False) -> tuple:
                                 participants_result.scalars().all()]
 
                 # Check if the event is public or if the username matches the organizer
-                if existing_event.private == 'Public' or existing_event.organizer == username or username in [participant[0] for participant in participants] or invite:
+                if existing_event.private == 'Public' or existing_event.organizer == username or username in [participant[0] for participant in participants]:
                     # Check if the username is among the participants
 
                     return [existing_event.title, existing_event.date, existing_event.organizer, existing_event.private, existing_event.text, participants], "event_found"

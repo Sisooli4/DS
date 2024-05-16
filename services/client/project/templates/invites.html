@@ -17,13 +17,14 @@
             </thead>
             {% for invite in invites %}
             <tr>
-                <td>{{ invite[1] }}</td>
+                <td><a href="/web/event/{{ invite[0] }}">{{ invite[1] }}</a></td>
                 <td>{{ invite[2] }}</td>
                 <td>{{ invite[3] }}</td>
                 <td>{{ invite[4] }}</td>
-                <td><button class="btn btn-primary" value="{{ invite[0] }}">Participate</button>
-                    <button class="btn btn-primary" value="{{ invite[0] }}">Maybe Participate</button>
-                    <button class="btn btn-primary" value="{{ invite[0] }}">Don't Participate</button>
+                <td>
+                    <button class="btn btn-primary participate-btn" value="{{ invite[0] }}" data-title="{{ invite[1] }}" data-date="{{ invite[2] }}" data-organizer="{{ invite[3] }}" data-private="{{ invite[4] }}">Participate</button>
+                    <button class="btn btn-primary participate-btn" value="{{ invite[0] }}" data-title="{{ invite[1] }}" data-date="{{ invite[2] }}" data-organizer="{{ invite[3] }}" data-private="{{ invite[4] }}">Maybe Participate</button>
+                    <button class="btn btn-primary participate-btn" value="{{ invite[0] }}" data-title="{{ invite[1] }}" data-date="{{ invite[2] }}" data-organizer="{{ invite[3] }}" data-private="{{ invite[4] }}">Don't Participate</button>
                 </td>
             </tr>
             {% endfor %}
@@ -36,19 +37,46 @@
 
 <script>
     $(document).ready(function(){
-        $(":button").click(function(){
-            jQuery.ajax({
-                url: '/invites',
+        $(".participate-btn").click(function(){
+            var eventStatus = $(this).text();
+            var eventId = $(this).val();
+            var eventTitle = $(this).data('title');
+            var eventDate = $(this).data('date');
+            var eventOrganizer = $(this).data('organizer');
+            var eventPrivate = $(this).data('private');
+
+            $.ajax({
+                url: '/web/invites',
                 type: "POST",
                 data: JSON.stringify({
-                    'event': $(this).attr("value"),
-                    'status': $(this).text()
+                    'event': eventId,
+                    'status': eventStatus,
+                    'title': eventTitle,
+                    'date': eventDate,
+                    'organizer': eventOrganizer,
+                    'private': eventPrivate
                 }),
                 dataType: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(){}
+                success: function(response){
+                    if(response.category && response.message) {
+                        var alertClass = 'alert-' + response.category;
+                        var alertHtml = '<div class="alert ' + alertClass + '" role="alert">' + response.message + '</div>';
+                        $("body").prepend(alertHtml);  // Show the alert at the top of the page
+                        setTimeout(function() {
+                            window.location.reload();  // Reload the page after a short delay
+                        }, 1500);  // Adjust the delay as needed
+                    } else {
+                        window.location.reload();  // Fallback to reload the page immediately
+                    }
+                },
+                error: function(xhr, status, error){
+                    console.error("There was an error processing your request:", error);
+                    alert("There was an error processing your request.");
+                }
             });
         });
     });
 </script>
+
 {% endblock %}

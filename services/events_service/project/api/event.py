@@ -14,7 +14,7 @@ from icecream import ic
 
 from pydantic import BaseModel
 
-from ..database.db_wrapper import add_event, get_event, get_public
+from ..database.db_wrapper import add_event, get_event, get_public, add_participant
 
 router = APIRouter()
 
@@ -44,8 +44,8 @@ async def add(title:str = Form(), organizer: str = Form(), date: date = Form(), 
         raise HTTPException(status_code=500, detail="An unknown error occurred.")
 
 @router.get("/event/{id}")
-async def get(id: int, username:str, invite:bool = False):
-    event, error_code = await get_event(id, username, invite)
+async def get(id: int, username:str):
+    event, error_code = await get_event(id, username)
     if event:
         return {"event": event}
     elif error_code == 'access_denied':
@@ -72,3 +72,16 @@ async def public():
     else:
         raise HTTPException(status_code=500, detail="An unknown error occurred.")
 
+@router.post("/participant")
+async def add_part(event_id:int, username:str, status:str):
+
+    added, message = await add_participant(event_id, username, status)
+    if added:
+        return {"message": message}
+    elif message == 'participant_already_exists':
+        raise HTTPException(status_code=409, detail=f"User {username} already participates!")
+    elif message == 'server_error':
+        raise HTTPException(status_code=500,
+                            detail=f"An error occurred while adding {username} to the event as participant!\nPlease try again later.")
+    else:
+        raise HTTPException(status_code=500, detail="An unknown error occurred.")

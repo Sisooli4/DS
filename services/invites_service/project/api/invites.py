@@ -1,18 +1,12 @@
 import httpx
-from fastapi import APIRouter, Request, Depends
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
-
+from fastapi import APIRouter, Form
 from fastapi import HTTPException
-import requests
-from sqlalchemy import Column, Integer, String, select
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-import typing
 from icecream import ic
+from datetime import date
 
 from pydantic import BaseModel
 
-from ..database.db_wrapper import add_invite, get_invites
+from ..database.db_wrapper import add_invite, get_invites, delete_invite
 
 router = APIRouter()
 
@@ -22,14 +16,14 @@ class Invite(BaseModel):
     username: str
 
 @router.post("")
-async def add(event_id:int, usernames:str):
+async def add(event_id:int = Form(), title:str = Form(), date:date = Form(), organizer:str = Form(), private:str = Form(), usernames:str = Form()):
     usernamesList = usernames.split(";")
     errorString = ""
     for username in usernamesList:
         async with httpx.AsyncClient() as client:
             resp = await client.get(f"http://nginx/users/exists?username={username}")
             if resp.status_code == 200:
-                invite, message = await add_invite(event_id, username)
+                invite, message = await add_invite(event_id, title, date, organizer, private, username)
                 if not invite:
                     if message == "invite_already_exists":
                         errorString += f"User {username} is already invited!\n"
@@ -45,20 +39,24 @@ async def add(event_id:int, usernames:str):
         raise HTTPException(status_code=422, detail=errorString)
 
 @router.get("/{username}")
-async def add(username:str):
-    event_ids, message = await get_invites(username)
+async def get(username:str):
+    invites, message = await get_invites(username)
     if message == "events_not_found":
         raise HTTPException(status_code=404, detail="No invites found for this user")
     elif message == "server_error":
         raise HTTPException(status_code=500, detail="Server error when trying to get invites, try again later!")
 
     else:
-        invites = []
-        for event_id in event_ids:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(f"http://nginx/events/event/{event_id}?username={username}&invite={True}")
-                if resp.status_code == 200:
-                    event = resp.json().get("event")
-                    invites.append((event_id, event[0], event[1], event[2], event[3]))
-
         return {"invites":invites}
+
+@router.delete("")
+async def delete(event_id:int, username:str):
+    message = await delete_invite(event_id, username)
+    if message == "invite_deleted":
+        return {'detail': 'Invite deleted'}
+    elif message == "invite_not_found":
+        raise HTTPException(status_code=404, detail="The invite doesn't exist")
+    elif message == "server_error":
+        raise HTTPException(status_code=500, detail='Server error while deleting invite')
+    else:
+        raise HTTPException(status_code=500, detail="An unknown error has occurred while deleting invite")
