@@ -3,9 +3,6 @@ from fastapi import APIRouter, Request, Depends, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse, JSONResponse
 
-from fastapi import HTTPException
-import requests
-import typing
 from icecream import ic
 
 from pydantic import BaseModel
