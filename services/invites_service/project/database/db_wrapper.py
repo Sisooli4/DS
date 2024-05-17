@@ -13,6 +13,8 @@ from .models import Invite
 async def add_invite(event_id: int, title:str, date:date, organizer:str, private:str, username: str) -> tuple:
     async with get_async_session() as session:
         try:
+            if organizer == username:
+                return None, 'self_invite'
             # Check if the event already exists with the same constraints
             stmt = select(Invite).where(
                 Invite.event_id == event_id, Invite.title == title,

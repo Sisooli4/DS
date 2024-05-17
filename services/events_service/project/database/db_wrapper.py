@@ -1,7 +1,6 @@
 from datetime import date
 from sqlalchemy import select
 import logging
-from icecream import ic
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from .models import Event, Participants
 from .database import get_async_session

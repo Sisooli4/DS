@@ -1,7 +1,5 @@
 from sqlalchemy import select
 import logging
-import bcrypt
-from icecream import ic
 from datetime import date
 from .models import Share, Calendar
 from .database import get_async_session
@@ -21,7 +19,6 @@ async def get_calendar(username:str, asker:str):
             stmt = select(Calendar).where(Calendar.username == username)
             result = await session.execute(stmt)
             events = [[event.event_id, event.title, event.date, event.organizer, event.status, event.private] for event in result.scalars().all()]
-            ic(events)
             if events == []:
                 return None, 'nothing_to_show'
             else:

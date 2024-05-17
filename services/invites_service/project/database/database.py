@@ -1,20 +1,13 @@
 import os
-import typing
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from contextlib import asynccontextmanager
-from icecream import ic
 from .models import Base
 
-# Create an asynchronous engine for PostgreSQL
-# Update the connection string with your PostgreSQL credentials
 DATABASE_URL = f"postgresql+asyncpg://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
 engine = create_async_engine(DATABASE_URL, echo=True)
 
-# Create an asynchronous session maker
 async_session_maker = async_sessionmaker(engine)
 
-# Example use of the session maker
 async def create_db_and_tables():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

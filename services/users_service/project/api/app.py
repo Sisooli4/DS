@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 
-app = FastAPI(title='Auth Service',
+app = FastAPI(title='Users Service',
               version='0.1.0',
-              docs_url='/docs',
+              docs_url='/users-service/docs',
               redoc_url=None,
-              openapi_url="/openapi.json")
+              openapi_url="/users-service/openapi.json")

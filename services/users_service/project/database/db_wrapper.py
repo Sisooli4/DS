@@ -1,7 +1,6 @@
 from sqlalchemy import select
 import logging
 import bcrypt
-from icecream import ic
 from .models import User
 from .database import get_async_session
 from sqlalchemy.exc import SQLAlchemyError
